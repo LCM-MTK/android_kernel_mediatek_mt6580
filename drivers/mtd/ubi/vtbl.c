@@ -60,6 +60,9 @@
 #include <linux/slab.h>
 #include <asm/div64.h>
 #include "ubi.h"
+#ifdef CONFIG_PWR_LOSS_MTK_SPOH
+#include <mach/power_loss_test.h>
+#endif
 
 static void self_vtbl_check(const struct ubi_device *ubi);
 
@@ -99,6 +102,12 @@ int ubi_change_vtbl_record(struct ubi_device *ubi, int idx,
 		err = ubi_eba_unmap_leb(ubi, layout_vol, i);
 		if (err)
 			return err;
+#ifdef CONFIG_PWR_LOSS_MTK_SPOH
+		if (i == 0)
+			PL_RESET_ON_CASE("NAND", "CreateVol_1");
+		else if (i == 1)
+			PL_RESET_ON_CASE("NAND", "CreateVol_2");
+#endif
 
 		err = ubi_eba_write_leb(ubi, layout_vol, i, ubi->vtbl, 0,
 					ubi->vtbl_size);
@@ -151,6 +160,12 @@ int ubi_vtbl_rename_volumes(struct ubi_device *ubi,
 		err = ubi_eba_unmap_leb(ubi, layout_vol, i);
 		if (err)
 			return err;
+#ifdef CONFIG_PWR_LOSS_MTK_SPOH
+		if (i == 0)
+			PL_RESET_ON_CASE("NAND", "ModifyVol_1");
+		else if (i == 1)
+			PL_RESET_ON_CASE("NAND", "ModifyVol_2");
+#endif
 
 		err = ubi_eba_write_leb(ubi, layout_vol, i, ubi->vtbl, 0,
 					ubi->vtbl_size);
@@ -456,28 +471,28 @@ static struct ubi_vtbl_record *process_lvol(struct ubi_device *ubi,
 		/* Both LEB 1 and LEB 2 are OK and consistent */
 		vfree(leb[1]);
 		return leb[0];
-	} else {
-		/* LEB 0 is corrupted or does not exist */
-		if (leb[1]) {
-			leb_corrupted[1] = vtbl_check(ubi, leb[1]);
-			if (leb_corrupted[1] < 0)
-				goto out_free;
-		}
-		if (leb_corrupted[1]) {
-			/* Both LEB 0 and LEB 1 are corrupted */
-			ubi_err("both volume tables are corrupted");
-			goto out_free;
-		}
-
-		ubi_warn("volume table copy #1 is corrupted");
-		err = create_vtbl(ubi, ai, 0, leb[1]);
-		if (err)
-			goto out_free;
-		ubi_msg("volume table was restored");
-
-		vfree(leb[0]);
-		return leb[1];
 	}
+
+	/* LEB 0 is corrupted or does not exist */
+	if (leb[1]) {
+		leb_corrupted[1] = vtbl_check(ubi, leb[1]);
+		if (leb_corrupted[1] < 0)
+			goto out_free;
+	}
+	if (leb_corrupted[1]) {
+		/* Both LEB 0 and LEB 1 are corrupted */
+		ubi_err("both volume tables are corrupted");
+		goto out_free;
+	}
+
+	ubi_warn("volume table copy #1 is corrupted");
+	err = create_vtbl(ubi, ai, 0, leb[1]);
+	if (err)
+		goto out_free;
+	ubi_msg("volume table was restored");
+
+	vfree(leb[0]);
+	return leb[1];
 
 out_free:
 	vfree(leb[0]);
@@ -644,6 +659,32 @@ static int init_volumes(struct ubi_device *ubi,
 	reserved_pebs += vol->reserved_pebs;
 	ubi->vol_count += 1;
 	vol->ubi = ubi;
+
+#ifdef CONFIG_MTD_UBI_LOWPAGE_BACKUP
+	/* And add the backup volume */
+	vol = kzalloc(sizeof(struct ubi_volume), GFP_KERNEL);
+	if (!vol)
+		return -ENOMEM;
+
+	vol->reserved_pebs = UBI_BACKUP_VOLUME_EBS;
+	vol->alignment = 1;
+	vol->vol_type = UBI_DYNAMIC_VOLUME;
+	vol->name_len = sizeof(UBI_BACKUP_VOLUME_NAME) - 1;
+	memcpy(vol->name, UBI_BACKUP_VOLUME_NAME, vol->name_len + 1);
+	vol->usable_leb_size = ubi->leb_size;
+	vol->used_ebs = vol->reserved_pebs;
+	vol->last_eb_bytes = vol->reserved_pebs;
+	vol->used_bytes =
+		(long long)vol->used_ebs * (ubi->leb_size - vol->data_pad);
+	vol->vol_id = UBI_BACKUP_VOLUME_ID;
+	vol->ref_count = 1;
+
+	ubi_assert(!ubi->volumes[vol_id2idx(ubi, vol->vol_id)]);
+	ubi->volumes[vol_id2idx(ubi, vol->vol_id)] = vol;
+	reserved_pebs += vol->reserved_pebs;
+	ubi->vol_count += 1;
+	vol->ubi = ubi;
+#endif
 
 	if (reserved_pebs > ubi->avail_pebs) {
 		ubi_err("not enough PEBs, required %d, available %d",
@@ -866,3 +907,5 @@ static void self_vtbl_check(const struct ubi_device *ubi)
 		BUG();
 	}
 }
+
+

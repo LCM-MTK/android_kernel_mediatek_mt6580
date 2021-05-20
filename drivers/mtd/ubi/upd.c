@@ -243,7 +243,6 @@ static int write_leb(struct ubi_device *ubi, struct ubi_volume *vol, int lnum,
 			dbg_gen("all %d bytes contain 0xFF - skip", len);
 			return 0;
 		}
-
 		err = ubi_eba_write_leb(ubi, vol, lnum, buf, 0, len);
 	} else {
 		/*
