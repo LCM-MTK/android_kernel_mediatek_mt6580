@@ -79,7 +79,6 @@ struct fscrypt_info {
 	u8 ci_filename_mode;
 	u8 ci_flags;
 	struct crypto_skcipher *ci_ctfm;
-	u8 ci_master_key[FS_KEY_DESCRIPTOR_SIZE];
 };
 
 #define FS_CTX_REQUIRES_FREE_ENCRYPT_FL		0x00000001

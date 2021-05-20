@@ -14578,6 +14578,17 @@ void nl80211_send_ap_stopped(struct wireless_dev *wdev)
 	nlmsg_free(msg);
 }
 
+int cfg80211_external_auth_request(struct net_device *dev,
+				   struct cfg80211_external_auth_params *params,
+				   gfp_t gfp)
+{
+     if(!dev && !params && gfp)
+	return 0;
+      else
+       return 1;
+}
+EXPORT_SYMBOL(cfg80211_external_auth_request);
+
 /* initialisation/exit functions */
 
 int nl80211_init(void)
