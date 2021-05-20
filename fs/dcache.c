@@ -1914,10 +1914,12 @@ struct dentry *d_make_root(struct inode *root_inode)
 
 	if (root_inode) {
 		res = __d_alloc(root_inode->i_sb, NULL);
-		if (res)
+		if (res) {
+			res->d_flags |= DCACHE_RCUACCESS;
 			d_instantiate(res, root_inode);
-		else
+		} else {
 			iput(root_inode);
+		}
 	}
 	return res;
 }
@@ -3257,6 +3259,7 @@ char *d_absolute_path(const struct path *path,
 		return ERR_PTR(error);
 	return res;
 }
+EXPORT_SYMBOL(d_absolute_path);
 
 /*
  * same as __d_path but appends "(deleted)" for unlinked files.

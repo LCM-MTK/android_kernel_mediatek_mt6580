@@ -221,7 +221,7 @@ config ZLIB_INFLATE
 	tristate
 
 config ZLIB_DEFLATE
-	tristate
+	tristate "ZLIB_DEFLATE function"
 	select BITREVERSE
 
 config LZO_COMPRESS
@@ -238,6 +238,10 @@ config LZ4HC_COMPRESS
 
 config LZ4_DECOMPRESS
 	tristate
+
+config LZ4K
+	bool "LZ4K compression"
+	default n
 
 source "lib/xz/Kconfig"
 

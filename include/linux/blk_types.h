@@ -25,6 +25,7 @@ typedef void (bio_end_io_t) (struct bio *);
 struct bio {
 	struct bio		*bi_next;	/* request queue link */
 	struct block_device	*bi_bdev;
+	unsigned short		bi_write_hint;
 	int			bi_error;
 	unsigned int		bi_opf;		/* bottom bits req flags,
 						 * top bits REQ_OP. Use
@@ -67,6 +68,20 @@ struct bio {
 	};
 
 	unsigned short		bi_vcnt;	/* how many bio_vec's */
+
+#ifdef CONFIG_MTK_HW_FDE
+	/*
+	 * MTK PATH:
+	 *
+	 * Indicating this bio request needs encryption or decryption by
+	 * HW FDE (Full Disk Encryption) engine.
+	 *
+	 * Set by DM Crypt.
+	 * Quried by HW FDE engine driver, e.g., eMMC/UFS.
+	 */
+	unsigned int		bi_hw_fde;
+	unsigned int		bi_key_idx;
+#endif
 
 	/*
 	 * Everything starting with bi_max_vecs will be preserved by bio_reset()

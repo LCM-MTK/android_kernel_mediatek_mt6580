@@ -221,11 +221,17 @@ static inline struct page *page_cache_alloc_cold(struct address_space *x)
 
 static inline gfp_t readahead_gfp_mask(struct address_space *x)
 {
+#ifdef CONFIG_CMA_REFUSE_PAGE_CACHE
 	return mapping_gfp_mask(x) |
 				  __GFP_COLD | __GFP_NORETRY | __GFP_NOWARN;
+#else
+	return mapping_gfp_mask(x) |
+				  __GFP_COLD | __GFP_NORETRY | __GFP_NOWARN |
+				  __GFP_CMA;
+#endif
 }
 
-typedef int filler_t(void *, struct page *);
+typedef int filler_t(struct file *, struct page *);
 
 pgoff_t page_cache_next_hole(struct address_space *mapping,
 			     pgoff_t index, unsigned long max_scan);
@@ -238,6 +244,7 @@ pgoff_t page_cache_prev_hole(struct address_space *mapping,
 #define FGP_WRITE		0x00000008
 #define FGP_NOFS		0x00000010
 #define FGP_NOWAIT		0x00000020
+#define FGP_FOR_MMAP		0x00000040
 
 struct page *pagecache_get_page(struct address_space *mapping, pgoff_t offset,
 		int fgp_flags, gfp_t cache_gfp_mask);
@@ -369,7 +376,7 @@ extern int read_cache_pages(struct address_space *mapping,
 static inline struct page *read_mapping_page(struct address_space *mapping,
 				pgoff_t index, void *data)
 {
-	filler_t *filler = (filler_t *)mapping->a_ops->readpage;
+	filler_t *filler = mapping->a_ops->readpage;
 	return read_cache_page(mapping, index, filler, data);
 }
 

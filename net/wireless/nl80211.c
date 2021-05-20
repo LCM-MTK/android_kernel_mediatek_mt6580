@@ -2613,8 +2613,10 @@ static int nl80211_dump_interface(struct sk_buff *skb, struct netlink_callback *
 			continue;
 		}
 
+#if 0
 		if (filter_wiphy >= 0 && filter_wiphy != rdev->wiphy_idx)
 			continue;
+#endif
 
 		if_idx = 0;
 
@@ -9492,6 +9494,9 @@ static int nl80211_join_mesh(struct sk_buff *skb, struct genl_info *info)
 		err = nl80211_parse_tx_bitrate_mask(info, &setup.beacon_rate);
 		if (err)
 			return err;
+
+		if (!setup.chandef.chan)
+			return -EINVAL;
 
 		err = validate_beacon_tx_rate(rdev, setup.chandef.chan->band,
 					      &setup.beacon_rate);
